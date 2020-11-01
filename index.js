@@ -14,7 +14,8 @@ const svgo = new (require('svgo'))();
 const optimize = deasync(optimizeAsync);
 
 const defaultOptions = {
-  optimize: false, encodingFormat: 'base64'
+  encodingFormat: 'base64',
+  optimize: false
 };
 
 // exports
@@ -27,16 +28,20 @@ module.exports = inliner;
  * @param opts {optimize: true/false}
  * @returns {Function}
  */
-function inliner (base, opts) {
+function inliner(base, opts) {
   opts = assign({}, defaultOptions, opts);
 
   return function (path, selectors) {
     try {
       let content = readFileSync(resolve(base, path.getValue()));
 
-      if (selectors && selectors.getLength && selectors.getLength()) { content = changeStyle(content, selectors); }
+      if (selectors && selectors.getLength && selectors.getLength()) {
+        content = changeStyle(content, selectors);
+      }
 
-      if (opts.optimize) { content = Buffer.from(optimize(content).data, 'utf8'); }
+      if (opts.optimize) {
+        content = Buffer.from(optimize(content).data, 'utf8');
+      }
 
       return encode(content, {
         encodingFormat: opts.encodingFormat
@@ -53,7 +58,7 @@ function inliner (base, opts) {
  * @param opts
  * @returns {types.String}
  */
-function encode (content, opts) {
+function encode(content, opts) {
   if (opts.encodingFormat === 'uri') {
     return new types.String('url("' + svgToDataUri(content.toString('UTF-8')) + '")');
   }
@@ -71,7 +76,7 @@ function encode (content, opts) {
  * @param styles
  * @returns {*}
  */
-function changeStyle (source, selectors) {
+function changeStyle(source, selectors) {
   const dom = parse(source, {
     xmlMode: true
   });
@@ -100,7 +105,7 @@ function changeStyle (source, selectors) {
  * @param map
  * @returns {null}
  */
-function mapToObj (map) {
+function mapToObj(map) {
   const obj = Object.create(null);
 
   for (let i = 0, len = map.getLength(); i < len; i++) {
@@ -128,7 +133,7 @@ function mapToObj (map) {
   return obj;
 }
 
-function optimizeAsync (src, cb) {
+function optimizeAsync(src, cb) {
   svgo
     .optimize(src)
     .then(function (result) {

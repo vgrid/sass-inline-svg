@@ -1,6 +1,7 @@
 {
   "extends": [
     "standard",
+    "plugin:prettier/recommended",
     "plugin:mocha/recommended"
   ],
   "env": {
@@ -8,23 +9,26 @@
     "es6": true,
     "mocha": true
   },
+  "plugins": [
+    "prettier"
+  ],
   "rules": {
     "semi": [
-      2,
+      "error",
       "always"
     ],
     "curly": [
-      2,
+      "error",
       "all"
     ],
     "object-curly-newline": [
-      2,
+      "error",
       {
         "minProperties": 1
       }
     ],
     "no-multiple-empty-lines": [
-      2,
+      "error",
       {
         "max": 1
       }
