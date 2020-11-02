@@ -8,6 +8,10 @@
     "lint": "eslint index.js default.js test/**/*.js",
     "coveralls": "nyc report --reporter=text-lcov | coveralls"
   },
+  "files": [
+    "default.js",
+    "index.js"
+  ],
   "config": {
     "ghooks": {
       "pre-push": "npm test",
