@@ -1,16 +1,14 @@
-// imports
 const deasync = require('deasync');
-const readFileSync = require('fs').readFileSync;
-const resolve = require('path').resolve;
-const types = require('sass').types;
-const assign = require('object-assign');
+const { readFileSync } = require('fs');
+const { resolve } = require('path');
+const { types } = require('sass');
 const parse = require('htmlparser2').parseDOM;
-const cssSelect = require('css-select');
-const selectAll = cssSelect.selectAll;
-const selectOne = cssSelect.selectOne;
+const { selectAll, selectOne } = require('css-select');
 const serialize = require('dom-serializer').default;
 const svgToDataUri = require('mini-svg-data-uri');
-const svgo = new (require('svgo'))();
+const SVGO = require('svgo');
+
+const svgo = new SVGO();
 const optimize = deasync(optimizeAsync);
 
 const defaultOptions = {
@@ -18,92 +16,94 @@ const defaultOptions = {
   optimize: false
 };
 
-// exports
-module.exports = inliner;
-
 /**
  * The SVG inliner function
  * This is a factory that expects a base path abd returns the actual function
+ *
  * @param base
  * @param opts {optimize: true/false}
  * @returns {Function}
  */
-function inliner(base, opts) {
-  opts = assign({}, defaultOptions, opts);
+module.exports = function inliner(base, opts) {
+  const options = {
+    ...defaultOptions,
+    ...opts
+  };
 
-  return function (path, selectors) {
+  return (path, selectors) => {
     try {
       let content = readFileSync(resolve(base, path.getValue()));
 
-      if (selectors && selectors.getLength && selectors.getLength()) {
+      if (selectors?.getLength && selectors.getLength()) {
         content = changeStyle(content, selectors);
       }
 
-      if (opts.optimize) {
+      if (options.optimize) {
         content = Buffer.from(optimize(content).data, 'utf8');
       }
 
-      return encode(content, {
-        encodingFormat: opts.encodingFormat
-      });
+      return encode(content, options.encodingFormat);
     } catch (err) {
       console.log(err);
     }
   };
-}
+};
 
 /**
- * encode the string
+ * Encode the string
+ *
  * @param content
  * @param opts
  * @returns {types.String}
  */
-function encode(content, opts) {
-  if (opts.encodingFormat === 'uri') {
-    return new types.String('url("' + svgToDataUri(content.toString('UTF-8')) + '")');
+function encode(content, encodingFormat) {
+  if (encodingFormat === 'uri') {
+    return new types.String(`url("${svgToDataUri(content.toString('utf8'))}")`);
   }
 
-  if (opts.encodingFormat === 'base64') {
-    return new types.String('url("data:image/svg+xml;base64,' + content.toString('base64') + '")');
+  if (encodingFormat === 'base64') {
+    return new types.String(`url("data:image/svg+xml;base64,${content.toString('base64')}")`);
   }
 
-  throw new Error('encodingFormat ' + opts.encodingFormat + ' is not supported');
+  throw new Error(`encodingFormat "${encodingFormat}" is not supported`);
 }
 
 /**
- * change the style of the svg
+ * Change the style of the SVG
+ *
  * @param source
  * @param styles
  * @returns {*}
  */
 function changeStyle(source, selectors) {
-  const dom = parse(source, {
-    xmlMode: true
-  });
+  const dom = parse(source, { xmlMode: true });
   const svg = dom ? selectOne('svg', dom) : null;
 
-  selectors = mapToObj(selectors);
-
   if (!svg) {
-    throw Error('Invalid svg file');
+    throw Error('Invalid SVG file');
   }
 
-  Object.keys(selectors).forEach(function (selector) {
-    const elements = selectAll(selector, svg);
-    const attribs = selectors[selector];
+  const obj = mapToObj(selectors);
 
-    elements.forEach(function (element) {
-      assign(element.attribs, attribs);
-    });
-  });
+  for (const selector in obj) {
+    const elements = selectAll(selector, svg);
+    const attribs = obj[selector];
+
+    for (const element of elements) {
+      element.attribs = {
+        ...element.attribs,
+        ...attribs
+      };
+    }
+  }
 
   return Buffer.from(serialize(dom), 'utf8');
 }
 
 /**
- * transform a sass map into a js object
+ * Transform a sass map into a js object
+ *
  * @param map
- * @returns {null}
  */
 function mapToObj(map) {
   const obj = Object.create(null);
@@ -118,9 +118,9 @@ function mapToObj(map) {
         break;
       case types.Color.name:
         if (value.getA() === 1) {
-          value = 'rgb(' + value.getR() + ',' + value.getG() + ',' + value.getB() + ')';
+          value = `rgb(${value.getR()},${value.getG()},${value.getB()})`;
         } else {
-          value = 'rgba(' + value.getR() + ',' + value.getG() + ',' + value.getB() + ',' + value.getA() + ')';
+          value = `rgba(${value.getR()},${value.getG()},${value.getB()},${value.getA()})`;
         }
         break;
       default:
@@ -133,11 +133,14 @@ function mapToObj(map) {
   return obj;
 }
 
+/**
+ *
+ * @param {*} src
+ * @param {*} cb
+ */
 function optimizeAsync(src, cb) {
   svgo
     .optimize(src)
-    .then(function (result) {
-      return cb(null, result);
-    })
-    .catch(cb);
+    .then((result) => cb(null, result))
+    .catch((error) => cb(error));
 }

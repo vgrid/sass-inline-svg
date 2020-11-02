@@ -12,26 +12,5 @@
   "plugins": [
     "prettier"
   ],
-  "rules": {
-    "semi": [
-      "error",
-      "always"
-    ],
-    "curly": [
-      "error",
-      "all"
-    ],
-    "object-curly-newline": [
-      "error",
-      {
-        "minProperties": 1
-      }
-    ],
-    "no-multiple-empty-lines": [
-      "error",
-      {
-        "max": 1
-      }
-    ]
-  }
+  "rules": {}
 }
