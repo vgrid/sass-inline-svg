@@ -1,15 +1,13 @@
-const deasync = require('deasync');
-const { readFileSync } = require('fs');
-const { resolve } = require('path');
-const { types } = require('sass');
-const parse = require('htmlparser2').parseDOM;
-const { selectAll, selectOne } = require('css-select');
-const serialize = require('dom-serializer').default;
-const svgToDataUri = require('mini-svg-data-uri');
-const SVGO = require('svgo');
+// @ts-check
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import * as sass from 'sass';
 
-const svgo = new SVGO();
-const optimize = deasync(optimizeAsync);
+import { parseDocument } from 'htmlparser2';
+import { selectAll, selectOne } from 'css-select';
+import serialize from 'dom-serializer';
+import svgToDataUri from 'mini-svg-data-uri';
+import { optimize } from 'svgo';
 
 const defaultOptions = {
   encodingFormat: 'base64',
@@ -20,127 +18,123 @@ const defaultOptions = {
  * The SVG inliner function
  * This is a factory that expects a base path abd returns the actual function
  *
- * @param base
- * @param opts {optimize: true/false}
- * @returns {Function}
+ * @param {string} base
+ * @param {object} [opts]
+ * @param {string} [opts.encodingFormat]
+ * @param {boolean} [opts.optimize]
+ * @returns {sass.CustomFunction<'async'>}
  */
-module.exports = function inliner(base, opts) {
+export default function inliner(base, opts) {
   const options = {
     ...defaultOptions,
     ...opts
   };
 
-  return (path, selectors) => {
+  /**
+   * @param {sass.Value[]} args
+   * @returns {Promise<sass.SassString>}
+   */
+  return async function (args) {
+    const path = /** @type {sass.SassString} */ (args[0]);
+    const selectors = /** @type {sass.Value | undefined} */ (args[1]);
     try {
-      let content = readFileSync(resolve(base, path.getValue()));
+      const resolvedPath = resolve(base, path.text);
+      let content = await readFile(resolvedPath, 'utf8');
 
-      if (selectors?.getLength && selectors.getLength()) {
-        content = changeStyle(content, selectors);
+      const mapSelectors = selectors?.tryMap();
+
+      if (mapSelectors) {
+        content = changeStyle(content, mapSelectors);
       }
 
       if (options.optimize) {
-        content = Buffer.from(optimize(content).data, 'utf8');
+        content = optimize(content).data;
       }
 
       return encode(content, options.encodingFormat);
     } catch (err) {
       console.log(err);
+      return new sass.SassString('');
     }
   };
-};
+}
 
 /**
  * Encode the string
  *
- * @param content
- * @param opts
- * @returns {types.String}
+ * @param {string} content
+ * @param {string} encodingFormat
+ * @returns {sass.SassString}
  */
 function encode(content, encodingFormat) {
+  const buffer = Buffer.from(content, 'utf-8');
+
   if (encodingFormat === 'uri') {
-    return new types.String(`url("${svgToDataUri(content.toString('utf8'))}")`);
+    return new sass.SassString(`url("${svgToDataUri(buffer.toString('utf-8'))}")`, { quotes: false });
   }
 
   if (encodingFormat === 'base64') {
-    return new types.String(`url("data:image/svg+xml;base64,${content.toString('base64')}")`);
+    return new sass.SassString(`url("data:image/svg+xml;base64,${buffer.toString('base64')}")`, { quotes: false });
   }
 
   throw new Error(`encodingFormat "${encodingFormat}" is not supported`);
 }
 
 /**
- * Change the style of the SVG
+ * Change the style attributes of an SVG string.
  *
- * @param source
- * @param styles
+ * @param {string} source
+ * @param {sass.SassMap} selectorsMap
  * @returns {*}
  */
-function changeStyle(source, selectors) {
-  const dom = parse(source, { xmlMode: true });
-  const svg = dom ? selectOne('svg', dom) : null;
+function changeStyle(source, selectorsMap) {
+  const document = parseDocument(source, {
+    xmlMode: true
+  });
+  const svg = document ? selectOne('svg', document.childNodes) : null;
+
+  const selectors = mapToObj(selectorsMap);
 
   if (!svg) {
-    throw Error('Invalid SVG file');
+    throw Error('Invalid svg file');
   }
 
-  const obj = mapToObj(selectors);
-
-  for (const selector in obj) {
+  Object.keys(selectors).forEach(function (selector) {
     const elements = selectAll(selector, svg);
-    const attribs = obj[selector];
+    const newAttributes = selectors[selector];
 
-    for (const element of elements) {
-      element.attribs = {
-        ...element.attribs,
-        ...attribs
-      };
-    }
-  }
+    elements.forEach(function (element) {
+      // @ts-ignore -- attribs property does exist
+      Object.assign(element.attribs, newAttributes);
+    });
+  });
 
-  return Buffer.from(serialize(dom), 'utf8');
+  return serialize(document);
 }
 
 /**
- * Transform a sass map into a js object
+ * Recursively transforms a Sass map into a JS object.
  *
- * @param map
+ * @param {sass.SassMap} sassMap
+ * @returns {Record<any, any>}
  */
-function mapToObj(map) {
+function mapToObj(sassMap) {
   const obj = Object.create(null);
+  const map = sassMap.contents.toJS();
 
-  for (let i = 0, len = map.getLength(); i < len; i++) {
-    const key = map.getKey(i).getValue();
-    let value = map.getValue(i);
-
-    switch (value.constructor.name) {
-      case types.Map.name:
-        value = mapToObj(value);
-        break;
-      case types.Color.name:
-        if (value.getA() === 1) {
-          value = `rgb(${value.getR()},${value.getG()},${value.getB()})`;
-        } else {
-          value = `rgba(${value.getR()},${value.getG()},${value.getB()},${value.getA()})`;
-        }
-        break;
-      default:
-        value = value.getValue();
+  for (const [key, value] of /** @type {[string, sass.Value][]} */ (Object.entries(map))) {
+    if (value instanceof sass.SassMap) {
+      obj[key] = mapToObj(value);
+    } else if (value instanceof sass.SassColor) {
+      const r = Math.round(value.channel('red'));
+      const g = Math.round(value.channel('green'));
+      const b = Math.round(value.channel('blue'));
+      const a = value.channel('alpha');
+      obj[key] = a === 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${+a.toFixed(3)})`; // Limit alpha precision
+    } else {
+      obj[key] = value.toString();
     }
-
-    obj[key] = value;
   }
 
   return obj;
-}
-
-/**
- *
- * @param {*} src
- * @param {*} cb
- */
-function optimizeAsync(src, cb) {
-  svgo
-    .optimize(src)
-    .then((result) => cb(null, result))
-    .catch((error) => cb(error));
 }
