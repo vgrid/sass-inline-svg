@@ -1,8 +1,12 @@
 {
   "name": "@vgrid/sass-inline-svg",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A sass function that inlines svg files",
   "main": "index.js",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
   "scripts": {
     "test": "nyc mocha",
     "lint": "eslint index.js default.js test/**/*.js",
@@ -12,14 +16,6 @@
     "default.js",
     "index.js"
   ],
-  "config": {
-    "ghooks": {
-      "pre-push": "npm test",
-      "pre-commit": "npm run lint",
-      "post-merge": "npm install",
-      "post-rewrite": "npm install"
-    }
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/haithembelhaj/sass-inline-svg.git"
@@ -38,33 +34,39 @@
   },
   "homepage": "https://github.com/haithembelhaj/sass-inline-svg",
   "dependencies": {
-    "css-select": "^3.1.0",
-    "deasync": "^0.1.20",
-    "dom-serializer": "^1.1.0",
-    "htmlparser2": "^5.0.1",
-    "mini-svg-data-uri": "^1.2.3",
-    "svgo": "^1.3.2"
+    "css-select": "^5.1.0",
+    "deasync": "^0.1.30",
+    "dom-serializer": "^2.0.0",
+    "htmlparser2": "^10.0.0",
+    "mini-svg-data-uri": "^1.4.4",
+    "svgo": "^3.3.2"
   },
   "devDependencies": {
-    "chai": "^4.2.0",
-    "coveralls": "^3.1.0",
-    "eslint": "^7.12.1",
-    "eslint-config-prettier": "^6.15.0",
-    "eslint-config-standard": "^16.0.1",
-    "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-mocha": "^8.0.0",
+    "chai": "^5.2.0",
+    "coveralls": "^3.1.1",
+    "eslint": "^8.10.0",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-mocha": "^10.5.0",
     "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-prettier": "^3.1.4",
-    "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-standard": "^4.0.2",
-    "ghooks": "^2.0.4",
-    "mocha": "^8.2.0",
-    "nyc": "^15.1.0",
-    "prettier": "^2.1.2",
-    "sass": "^1.28.0"
+    "eslint-plugin-prettier": "^5.2.6",
+    "mocha": "^11.1.0",
+    "nyc": "^17.1.0",
+    "prettier": "^3.5.3",
+    "sass": "^1.87.0"
   },
   "peerDependencies": {
-    "sass": "^1.28.0"
+    "sass": "^1.87.0",
+    "sass-embedded": "^1.87.0"
+  },
+  "peerDependenciesMeta": {
+    "sass": {
+      "optional": true
+    },
+    "sass-embedded": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"
