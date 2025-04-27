@@ -1,12 +1,13 @@
 {
   "name": "@vgrid/sass-inline-svg",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A sass function that inlines svg files",
   "main": "index.js",
   "type": "module",
   "exports": {
     ".": "./index.js"
   },
+  "types": "./index.d.ts",
   "scripts": {
     "test": "nyc mocha",
     "lint": "eslint index.js default.js test/**/*.js",
@@ -14,7 +15,8 @@
   },
   "files": [
     "default.js",
-    "index.js"
+    "index.js",
+    "index.d.ts"
   ],
   "repository": {
     "type": "git",
@@ -54,19 +56,10 @@
     "mocha": "^11.1.0",
     "nyc": "^17.1.0",
     "prettier": "^3.5.3",
-    "sass": "^1.87.0"
-  },
-  "peerDependencies": {
-    "sass": "^1.87.0",
     "sass-embedded": "^1.87.0"
   },
-  "peerDependenciesMeta": {
-    "sass": {
-      "optional": true
-    },
-    "sass-embedded": {
-      "optional": true
-    }
+  "peerDependencies": {
+    "sass-embedded": "^1.87.0"
   },
   "publishConfig": {
     "access": "public"

@@ -1,7 +1,7 @@
 // @ts-check
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import * as sass from 'sass';
+import * as sass from 'sass-embedded';
 
 import { parseDocument } from 'htmlparser2';
 import { selectAll, selectOne } from 'css-select';

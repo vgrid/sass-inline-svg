@@ -1,5 +1,5 @@
 // @ts-check
-import * as sass from 'sass';
+import * as sass from 'sass-embedded';
 import svg from '../index.js';
 import { expect } from 'chai';
 import fs from 'fs';
